@@ -122,21 +122,21 @@ try:
         write(tmp)
         h = sensor.humidity
         t = sensor.temperature
-        if read(0)>200:
+        if read(0)>int (string[2]):
             GPIO.output(17,True)
             GPIO.output(27,True)
             GPIO.output(22,True)
             GPIO.output(26,True)
-        elif read(0)<=200:
+        elif read(0)<= int (string[2]):
             GPIO.output(17,False)
             GPIO.output(27,False)
             GPIO.output(22,False)
             GPIO.output(26,False)
         
-        if hum < HUM_THRESHOLD : #임계치보다 수분값이 작으면
+        if hum < HUM_THRESHOLD or hum < int (string[1]) : #임계치보다 수분값이 작으면
             GPIO.output(A1A, GPIO.HIGH) #워터펌프 가동
             GPIO.output(A1B, GPIO.LOW)
-        elif hum >= HUM_THRESHOLD:
+        elif hum >= HUM_THRESHOLD or hum >= int (string[1]):
             GPIO.output(A1A, GPIO.LOW)
             GPIO.output(A1B, GPIO.LOW)
         
