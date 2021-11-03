@@ -2,10 +2,27 @@ import smbus
 import RPi.GPIO as GPIO
 import time
 import spidev
-import Adafruit_DHT
+import board
+import adafruit_dht
+import atexit
+import requests
 
-sensor = Adafruit_DHT.DHT11
-pin = 4
+pin = 21
+#sensor = adafruit_dht.DHT11(pin)
+
+
+userID = 'admin1'
+houseID = 1
+userData = {'houseID':houseID,'userID':userID}
+
+url = 'http://210.182.153.118/'
+houseDataPage = 'housedata.php'
+getSettingValuePage = 'getsettingvalue.php'
+
+getres = requests.post(url+getSettingValuePage,data=userData)
+string = getres.text.split(',')
+print(string)
+print('')
 
 bus = smbus.SMBus(1)
 GPIO.setmode(GPIO.BCM)
@@ -80,10 +97,16 @@ def map(value, min_adc, max_adc, min_hum, max_hum):
     return min_hum+((value-min_adc)/scale_factor)
     
 #if __name__=="__main__":    #메인
+
+count = 0
+
 try:
     adcChannel=0
     setup(0x48)
     while True:
+        count = (count + 1) % 12
+        print('count =',count)
+        sensor = adafruit_dht.DHT11(pin)
         #print ('lux = ', read(0))
        # print ('AIN1 = ', read(1))
        # print ('AIN2 = ', read(2))
@@ -97,7 +120,8 @@ try:
         tmp = read(0)
         tmp = tmp * (255-125)/255+125
         write(tmp)
-        h, t = Adafruit_DHT.read_retry(sensor, pin)
+        h = sensor.humidity
+        t = sensor.temperature
         if read(0)>200:
             GPIO.output(17,True)
             GPIO.output(27,True)
@@ -118,12 +142,32 @@ try:
         
         if h is not None and t is not None :
             print("Temperature = {0:0.1f}*C Humidity = {1:0.1f}%".format(t, h))
-            print ('')
+
+            houseDatas = {'houseID':houseID,'temp':t,'moisture':h,'lux':read(0),'soil_moist':hum}
+
         else :
             print('Read error')
+
+        sensor.exit()
+
         
         time.sleep(5)
+
+        getres = requests.post(url+getSettingValuePage,data=userData)
+        print(getres)
+        string = getres.text.split(',')
+        print(string)
+
+        if count == 0:
+            response = requests.post(url+houseDataPage,data=houseDatas)
+            print(response)
+            print(response.text)
+        print('')
 
 finally:
     GPIO.cleanup()
     spi.close()
+
+@atexit.register
+def forcedoff():
+    sensor.exit()
